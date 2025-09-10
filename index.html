@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gaming Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.9.3/tsparticles.bundle.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0a0f;
+      color: white;
+      overflow-x: hidden;
+    }
+    #particles-js {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+    .sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      width: 180px; /* Narrower sidebar */
+      background: rgba(10,10,25,0.95);
+      padding: 15px; /* Less padding */
+      box-shadow: 0 0 15px #00f2ff;
+    }
+    .sidebar h2 {
+      color: #00f2ff;
+      margin-bottom: 15px;
+      text-shadow: 0 0 8px #00f2ff;
+      font-size: 20px; /* Smaller title */
+    }
+    .sidebar button {
+      display: block;
+      width: 100%;
+      margin: 8px 0; /* Smaller spacing */
+      padding: 8px; /* Smaller buttons */
+      background: transparent;
+      border: 1px solid #00f2ff;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px; /* Smaller font */
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .sidebar button:hover {
+      background: #00f2ff;
+      color: #000;
+      box-shadow: 0 0 15px #00f2ff;
+    }
+    .content {
+      margin-left: 200px; /* Adjusted for narrower sidebar */
+      padding: 20px;
+    }
+    h1, h2, h3, p {
+      color: #fff;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .card {
+      background: rgba(20,20,40,0.9);
+      padding: 15px;
+      border-radius: 12px;
+      transition: 0.3s;
+      border: 1px solid rgba(0,242,255,0.2);
+      cursor: pointer;
+      color: #fff;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: #00f2ff;
+      box-shadow: 0 0 12px #00f2ff;
+    }
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #111;
+      padding: 20px;
+      border-radius: 12px;
+      width: 80%; max-width: 800px;
+      box-shadow: 0 0 20px #00f2ff;
+      position: relative;
+      color: #fff;
+    }
+    .close {
+      position: absolute;
+      right: 15px; top: 10px;
+      font-size: 28px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .close:hover { color: #00f2ff; }
+    canvas {
+      background: rgba(0,0,0,0.1);
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="particles-js"></div>
+
+  <div class="sidebar">
+    <h2>🎮 Dashboard</h2>
+    <button onclick="renderDashboard()">Home</button>
+    <button onclick="renderCategories()">Categories</button>
+    <button onclick="renderTrends()">Trends</button>
+    <button onclick="renderEsports()">Esports</button>
+  </div>
+
+  <div class="content" id="content"></div>
+
+  <!-- Modal -->
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2 id="modalTitle"></h2>
+      <canvas id="modalChart"></canvas>
+    </div>
+  </div>
+
+<script>
+const gameData = [
+  { name: "Free Fire", downloads: 1500, category: "Battle Royale" },
+  { name: "COD Mobile", downloads: 1200, category: "FPS" },
+  { name: "Valorant", downloads: 950, category: "Shooter" },
+  { name: "Minecraft", downloads: 870, category: "Adventure" },
+  { name: "Among Us", downloads: 600, category: "Casual" },
+  { name: "PUBG Mobile", downloads: 1600, category: "Battle Royale" },
+  { name: "Fortnite", downloads: 1400, category: "Battle Royale" },
+  { name: "GTA V", downloads: 1000, category: "Action" },
+  { name: "Clash of Clans", downloads: 800, category: "Strategy" },
+  { name: "Roblox", downloads: 1100, category: "Sandbox" },
+  { name: "Apex Legends", downloads: 1300, category: "FPS" },
+  { name: "CS:GO", downloads: 1500, category: "Shooter" },
+  { name: "Dota 2", downloads: 1250, category: "MOBA" },
+  { name: "League of Legends", downloads: 1700, category: "MOBA" }
+];
+
+let modalChart;
+
+// -------- Modal Controls ----------
+function closeModal(){
+  document.getElementById("modal").style.display="none";
+  if(modalChart) modalChart.destroy();
+}
+window.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeModal(); });
+
+// -------- Render Functions --------
+function renderDashboard(){
+  content.innerHTML = `<h1>🏆 Most Downloaded Games</h1>
+    <canvas id="barChart" height="120"></canvas>
+    <div class="cards" id="gameCards"></div>`;
+  renderCards(gameData);
+
+  const ctx = document.getElementById("barChart").getContext("2d");
+  new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels: gameData.map(g=>g.name),
+      datasets:[{
+        label:"Downloads (in millions)",
+        data: gameData.map(g=>g.downloads),
+        backgroundColor:"#00f2ff"
+      }]
+    },
+    options:{responsive:true,plugins:{legend:{labels:{color:"#fff"}}},
+      scales:{x:{ticks:{color:"#aaa"}},y:{ticks:{color:"#aaa"}}}}
+  });
+}
+
+function renderCards(data,targetId="gameCards"){
+  const container=document.getElementById(targetId);
+  container.innerHTML="";
+  data.forEach(g=>{
+    const div=document.createElement("div");
+    div.className="card";
+    div.innerHTML=`<h3>${g.name}</h3><p>${g.category}</p><p>Downloads: ${g.downloads}</p>`;
+    div.onclick=()=>openModal(g.name,g);
+    container.appendChild(div);
+  });
+}
+
+function renderCategories(){
+  content.innerHTML=`<h1>📂 Categories</h1><div id="categorySections"></div>`;
+  const categories=[...new Set(gameData.map(g=>g.category))];
+  const sections=document.getElementById("categorySections");
+  categories.forEach(cat=>{
+    const catGames=gameData.filter(g=>g.category===cat);
+    const section=document.createElement("div");
+    section.innerHTML=`<h2 style="margin-top:20px;color:#a855f7">${cat}</h2>
+      <label><input type="checkbox" checked data-cat="${cat}"/> Show ${cat}</label>
+      <div class="cards" id="cards-${cat}"></div>`;
+    sections.appendChild(section);
+    renderCards(catGames,`cards-${cat}`);
+  });
+  sections.querySelectorAll("input[type='checkbox']").forEach(cb=>{
+    cb.addEventListener("change",(e)=>{
+      const cat=e.target.dataset.cat;
+      document.getElementById(`cards-${cat}`).style.display=e.target.checked?"grid":"none";
+    });
+  });
+}
+
+function renderTrends(){
+  content.innerHTML=`<h1>📈 Trends (2015 - 2024)</h1><canvas id="trendsChart" height="120"></canvas>`;
+  const ctx=document.getElementById("trendsChart").getContext("2d");
+  const neonColors=["#ff4dff","#00f2ff","#ffcc00","#00ff88","#ff4444","#8855ff","#ffaa00","#33ffcc"];
+  const datasets=gameData.map((game,i)=>({
+    label:game.name,
+    data:Array.from({length:10},()=>Math.floor(Math.random()*2000+200)),
+    borderColor:neonColors[i%neonColors.length],
+    backgroundColor:neonColors[i%neonColors.length]+"55",
+    borderWidth:3,tension:0.35,
+    pointRadius:4,pointHoverRadius:7,fill:true
+  }));
+  if(window.trendsChartInstance) window.trendsChartInstance.destroy();
+  window.trendsChartInstance=new Chart(ctx,{
+    type:"line",
+    data:{labels:["2015","2016","2017","2018","2019","2020","2021","2022","2023","2024"],datasets},
+    options:{responsive:true,plugins:{legend:{labels:{color:"#fff"}}},
+      scales:{x:{ticks:{color:"#aaa"},grid:{color:"rgba(255,255,255,0.1)"}}},
+      y:{ticks:{color:"#aaa"},grid:{color:"rgba(255,255,255,0.1)"}}}
+  });
+}
+
+function renderEsports(){
+  const esportsGames=gameData.filter(g=>
+    ["Free Fire","COD Mobile","Valorant","PUBG Mobile","Fortnite","Apex Legends","CS:GO","Dota 2","League of Legends"].includes(g.name));
+  content.innerHTML=`
+    <h1>🎮 Esports Overview</h1>
+    <div class="cards" id="esportsOverview">
+      <div class="card overview" data-title="World Championship" data-info="The global prize pool for 2024 was $2M with over 50 million viewers."><h3>World Championship</h3><p>Prize Pool: $2M</p></div>
+      <div class="card overview" data-title="Regional Leagues" data-info="Regional leagues run in 45+ countries with thousands of teams participating."><h3>Regional Leagues</h3><p>Active: 45 Countries</p></div>
+      <div class="card overview" data-title="Top Team" data-info="Team Phoenix Rising currently holds #1 in global rankings."><h3>Top Team</h3><p>Team Phoenix Rising</p></div>
+    </div>
+    <h2 style="margin-top:25px">🔥 Esports Games</h2>
+    <div class="cards" id="gameCards"></div>`;
+  renderCards(esportsGames);
+  document.querySelectorAll(".overview").forEach(card=>{
+    card.addEventListener("click",()=>{
+      openEsportsModal(card.dataset.title,card.dataset.info);
+    });
+  });
+}
+
+// -------- Modals --------
+function openModal(title,game){
+  modal.style.display="flex";
+  document.getElementById("modalTitle").innerText=title;
+  const ctx=document.getElementById("modalChart").getContext("2d");
+  if(modalChart) modalChart.destroy();
+  modalChart=new Chart(ctx,{
+    type:"line",
+    data:{
+      labels:["2015","2016","2017","2018","2019","2020","2021","2022","2023","2024"],
+      datasets:[{label:game.name,data:Array.from({length:10},()=>Math.floor(Math.random()*game.downloads+200)),
+        borderColor:"#00f2ff",tension:0.4,fill:true,backgroundColor:"rgba(0,242,255,0.2)"}]},
+    options:{responsive:true}
+  });
+}
+
+function openEsportsModal(title,info){
+  modal.style.display="flex";
+  document.getElementById("modalTitle").innerHTML=`${title}<br><small style="font-size:14px;color:#aaa">${info}</small>`;
+  const ctx=document.getElementById("modalChart").getContext("2d");
+  if(modalChart) modalChart.destroy();
+  modalChart=new Chart(ctx,{
+    type:"line",
+    data:{labels:["2015","2016","2017","2018","2019","2020","2021","2022","2023","2024"],
+      datasets:[{label:title+" Growth",data:Array.from({length:10},()=>Math.floor(Math.random()*200+50)),
+        borderColor:"#ff4dff",tension:0.4,fill:true,backgroundColor:"rgba(255,77,255,0.2)"}]},
+    options:{responsive:true}
+  });
+}
+
+// -------- Particles --------
+tsParticles.load("particles-js",{
+  background:{color:"#0a0a0f"},
+  particles:{number:{value:80},color:{value:"#00f2ff"},shape:{type:"circle"},
+    opacity:{value:0.5},size:{value:3},move:{enable:true,speed:2}},
+  interactivity:{events:{onhover:{enable:true,mode:"repulse"}}}
+});
+
+renderDashboard();
+</script>
+</body>
+</html>
